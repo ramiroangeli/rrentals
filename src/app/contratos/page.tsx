@@ -1,12 +1,12 @@
 import { verifySession } from "@/lib/dal";
-import { listCars } from "@/lib/airtable";
-import { TransactionForm } from "@/components/TransactionForm";
+import { listContractViews } from "@/lib/contracts";
 import { logout } from "@/app/actions/auth";
 import { AppNav } from "@/components/AppNav";
+import { ContractCard } from "@/components/ContractCard";
 
-export default async function Home() {
+export default async function ContratosPage() {
   await verifySession();
-  const cars = await listCars();
+  const contracts = await listContractViews();
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-10 pt-6">
@@ -18,7 +18,14 @@ export default async function Home() {
           </button>
         </form>
       </header>
-      <TransactionForm cars={cars} />
+
+      <div className="space-y-4">
+        {contracts.length === 0 ? (
+          <p className="text-sm text-zinc-400">Todavía no hay contratos cargados.</p>
+        ) : (
+          contracts.map((contract) => <ContractCard key={contract.id} contract={contract} />)
+        )}
+      </div>
     </div>
   );
 }

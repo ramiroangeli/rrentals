@@ -1,8 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/dal";
-import { createTransaction, type TransactionType } from "@/lib/airtable";
+import {
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+  parseTransactionFormData,
+} from "@/lib/airtable";
 
 export type TransactionFormState = { error?: string; success?: boolean } | undefined;
 
@@ -12,40 +18,39 @@ export async function submitTransaction(
 ): Promise<TransactionFormState> {
   await verifySession();
 
-  const carId = formData.get("carId");
-  const type = formData.get("type");
-  const category = formData.get("category");
-  const amountRaw = formData.get("amount");
-  const date = formData.get("date");
-  const notes = formData.get("notes");
+  const parsed = parseTransactionFormData(formData);
+  if ("error" in parsed) return { error: parsed.error };
 
-  if (typeof carId !== "string" || !carId) {
-    return { error: "Elegí un auto." };
-  }
-  if (type !== "Income" && type !== "Expense") {
-    return { error: "Elegí el tipo de movimiento." };
-  }
-  if (typeof category !== "string" || !category) {
-    return { error: "Elegí una categoría." };
-  }
-  if (typeof date !== "string" || !date) {
-    return { error: "Elegí una fecha." };
-  }
-
-  const amount = Number(amountRaw);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return { error: "Ingresá un monto válido." };
-  }
-
-  await createTransaction({
-    carId,
-    type: type as TransactionType,
-    category,
-    amount,
-    date,
-    notes: typeof notes === "string" ? notes : "",
-  });
+  await createTransaction(parsed.data);
 
   revalidatePath("/");
+  revalidatePath("/historial");
+  revalidatePath("/dashboard");
   return { success: true };
+}
+
+export async function updateTransactionAction(
+  _state: TransactionFormState,
+  formData: FormData
+): Promise<TransactionFormState> {
+  await verifySession();
+
+  const id = formData.get("id");
+  if (typeof id !== "string" || !id) return { error: "Falta el ID del movimiento." };
+
+  const parsed = parseTransactionFormData(formData);
+  if ("error" in parsed) return { error: parsed.error };
+
+  await updateTransaction(id, parsed.data);
+
+  revalidatePath("/historial");
+  revalidatePath("/dashboard");
+  redirect("/historial");
+}
+
+export async function deleteTransactionAction(id: string): Promise<void> {
+  await verifySession();
+  await deleteTransaction(id);
+  revalidatePath("/historial");
+  revalidatePath("/dashboard");
 }

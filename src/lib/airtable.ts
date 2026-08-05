@@ -89,6 +89,31 @@ export type NewTransaction = {
   notes?: string;
 };
 
+// Compartido entre el form de carga y el de edición: valida un FormData y
+// devuelve los datos listos para Airtable, o un mensaje de error para mostrar.
+export function parseTransactionFormData(
+  formData: FormData
+): { data: NewTransaction } | { error: string } {
+  const carId = formData.get("carId");
+  const type = formData.get("type");
+  const category = formData.get("category");
+  const amountRaw = formData.get("amount");
+  const date = formData.get("date");
+  const notes = formData.get("notes");
+
+  if (typeof carId !== "string" || !carId) return { error: "Elegí un auto." };
+  if (type !== "Income" && type !== "Expense") return { error: "Elegí el tipo de movimiento." };
+  if (typeof category !== "string" || !category) return { error: "Elegí una categoría." };
+  if (typeof date !== "string" || !date) return { error: "Elegí una fecha." };
+
+  const amount = Number(amountRaw);
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Ingresá un monto válido." };
+
+  return {
+    data: { carId, type, category, amount, date, notes: typeof notes === "string" ? notes : "" },
+  };
+}
+
 export async function createTransaction(input: NewTransaction): Promise<string> {
   const record = await getBase()(TABLES.transactions).create(
     {
@@ -104,6 +129,67 @@ export async function createTransaction(input: NewTransaction): Promise<string> 
     { typecast: true }
   );
   return record.id;
+}
+
+export type TransactionFull = {
+  id: string;
+  carId: string;
+  type: TransactionType;
+  category: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  notes: string;
+};
+
+function toTransactionFull(r: Airtable.Record<Airtable.FieldSet>): TransactionFull {
+  return {
+    id: r.id,
+    carId: ((r.get("Car") as string[]) ?? [])[0] ?? "",
+    type: r.get("Type") as TransactionType,
+    category: (r.get("Category") as string) ?? "",
+    amount: (r.get("Amount") as number) ?? 0,
+    date: (r.get("Date") as string) ?? "",
+    notes: (r.get("Notes") as string) ?? "",
+  };
+}
+
+export async function listTransactionsFull(): Promise<TransactionFull[]> {
+  const records = await getBase()(TABLES.transactions)
+    .select({
+      fields: ["Car", "Type", "Category", "Amount", "Date", "Notes"],
+      sort: [{ field: "Date", direction: "desc" }],
+    })
+    .all();
+
+  return records.map(toTransactionFull);
+}
+
+export async function getTransaction(id: string): Promise<TransactionFull | null> {
+  try {
+    const record = await getBase()(TABLES.transactions).find(id);
+    return toTransactionFull(record);
+  } catch {
+    return null;
+  }
+}
+
+export async function updateTransaction(id: string, input: NewTransaction): Promise<void> {
+  await getBase()(TABLES.transactions).update(
+    id,
+    {
+      Car: [input.carId],
+      Type: input.type,
+      Category: input.category,
+      Amount: input.amount,
+      Date: input.date,
+      Notes: input.notes ?? "",
+    },
+    { typecast: true }
+  );
+}
+
+export async function deleteTransaction(id: string): Promise<void> {
+  await getBase()(TABLES.transactions).destroy(id);
 }
 
 export type CarFull = {

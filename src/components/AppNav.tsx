@@ -7,20 +7,21 @@ const TABS = [
   { href: "/", label: "Cargar" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/contratos", label: "Contratos" },
+  { href: "/historial", label: "Historial" },
 ] as const;
 
 export function AppNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-1 rounded-full bg-zinc-100 p-1 dark:bg-zinc-900">
+    <nav className="flex gap-1 overflow-x-auto rounded-full bg-zinc-100 p-1 dark:bg-zinc-900">
       {TABS.map((tab) => {
-        const active = pathname === tab.href;
+        const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
         return (
           <Link
             key={tab.href}
             href={tab.href}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
               active
                 ? "bg-teal-700 text-white dark:bg-teal-500 dark:text-teal-950"
                 : "text-zinc-500 dark:text-zinc-400"

@@ -1,6 +1,7 @@
 import type { CarFinancials } from "@/lib/financials";
 import { formatCurrency, formatDateAU } from "@/lib/format";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
+import { Stat } from "@/components/Stat";
 
 const ACCENTS = [
   "before:bg-teal-500",
@@ -32,42 +33,14 @@ function RegoBanner({ car }: { car: CarFinancials }) {
   );
 }
 
-function Stat({
-  label,
-  value,
-  tone,
-  breakdown,
-}: {
-  label: string;
-  value: string;
-  tone?: "positive" | "negative";
-  breakdown?: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="text-xs text-zinc-500 dark:text-zinc-400">{label}</div>
-      <div
-        className={`text-xl font-bold tabular-nums ${
-          tone === "positive"
-            ? "text-emerald-600 dark:text-emerald-400"
-            : tone === "negative"
-              ? "text-red-600 dark:text-red-400"
-              : "text-zinc-900 dark:text-zinc-50"
-        }`}
-      >
-        {value}
-      </div>
-      {breakdown}
-    </div>
-  );
-}
-
 export function CarDashboardCard({
   car,
   accentIndex = 0,
+  periodStats,
 }: {
   car: CarFinancials;
   accentIndex?: number;
+  periodStats?: { income: number; expense: number; net: number };
 }) {
   const hasInvestment = car.totalInvested > 0;
   const progressPct = hasInvestment
@@ -140,6 +113,24 @@ export function CarDashboardCard({
         <p className="text-xs text-zinc-400">
           Cargá el costo de compra (total_invested) en Airtable para ver el progreso a breakeven.
         </p>
+      )}
+
+      {periodStats && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-zinc-50 px-3 py-2 text-xs dark:bg-zinc-900">
+          <span className="text-zinc-500 dark:text-zinc-400">Período seleccionado</span>
+          <span className="tabular-nums text-zinc-600 dark:text-zinc-300">
+            +{formatCurrency(periodStats.income)} / -{formatCurrency(periodStats.expense)}
+          </span>
+          <span
+            className={`font-semibold tabular-nums ${
+              periodStats.net >= 0
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-red-600 dark:text-red-400"
+            }`}
+          >
+            {formatCurrency(periodStats.net)}
+          </span>
+        </div>
       )}
     </div>
   );

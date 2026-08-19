@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# datos importados a mano, ya cargados en Airtable
+rrentals_transactions.csv
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

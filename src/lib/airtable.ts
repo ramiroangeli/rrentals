@@ -1,4 +1,5 @@
 import Airtable from "airtable";
+import { cache } from "react";
 
 let cachedBase: Airtable.Base | null = null;
 
@@ -31,20 +32,13 @@ export type Car = {
   model: string;
 };
 
+// Deriva de listCarsFull (más abajo) en vez de pegarle a Airtable de nuevo:
+// react cache() memoiza por función, así que dos funciones distintas that
+// pidan la tabla cars siempre cuentan como 2 llamadas de red aunque pidan
+// los mismos campos — por eso listCars() reusa el resultado de listCarsFull().
 export async function listCars(): Promise<Car[]> {
-  const records = await getBase()(TABLES.cars)
-    .select({
-      fields: ["REGO", "make", "model"],
-      sort: [{ field: "REGO", direction: "asc" }],
-    })
-    .all();
-
-  return records.map((r) => ({
-    id: r.id,
-    rego: (r.get("REGO") as string) ?? "",
-    make: (r.get("make") as string) ?? "",
-    model: (r.get("model") as string) ?? "",
-  }));
+  const cars = await listCarsFull();
+  return cars.map(({ id, rego, make, model }) => ({ id, rego, make, model }));
 }
 
 export type TransactionType = "Income" | "Expense";
@@ -153,25 +147,28 @@ function toTransactionFull(r: Airtable.Record<Airtable.FieldSet>): TransactionFu
   };
 }
 
-export async function listTransactionsFull(): Promise<TransactionFull[]> {
-  const records = await getBase()(TABLES.transactions)
-    .select({
-      fields: ["Car", "Type", "Category", "Amount", "Date", "Notes"],
-      sort: [{ field: "Date", direction: "desc" }],
-    })
+// Única lectura real de la tabla transactions, cacheada por request — tanto
+// listTransactionsFull() como listAllTransactions() derivan de acá en vez de
+// pedirle lo mismo a Airtable dos veces con distinta forma.
+const listTransactionRecords = cache(async () => {
+  return getBase()(TABLES.transactions)
+    .select({ fields: ["Car", "Type", "Category", "Amount", "Date", "Notes"] })
     .all();
+});
 
-  return records.map(toTransactionFull);
-}
+export const listTransactionsFull = cache(async (): Promise<TransactionFull[]> => {
+  const records = await listTransactionRecords();
+  return records.map(toTransactionFull).sort((a, b) => b.date.localeCompare(a.date));
+});
 
-export async function getTransaction(id: string): Promise<TransactionFull | null> {
+export const getTransaction = cache(async (id: string): Promise<TransactionFull | null> => {
   try {
     const record = await getBase()(TABLES.transactions).find(id);
     return toTransactionFull(record);
   } catch {
     return null;
   }
-}
+});
 
 export async function updateTransaction(id: string, input: NewTransaction): Promise<void> {
   await getBase()(TABLES.transactions).update(
@@ -199,12 +196,13 @@ export type CarFull = {
   model: string;
   regoExpiry: string | null; // YYYY-MM-DD
   totalInvested: number;
+  purchaseDate: string | null; // YYYY-MM-DD
 };
 
-export async function listCarsFull(): Promise<CarFull[]> {
+export const listCarsFull = cache(async (): Promise<CarFull[]> => {
   const records = await getBase()(TABLES.cars)
     .select({
-      fields: ["REGO", "make", "model", "rego_expiry", "total_invested"],
+      fields: ["REGO", "make", "model", "rego_expiry", "total_invested", "purchase_date"],
       sort: [{ field: "REGO", direction: "asc" }],
     })
     .all();
@@ -216,8 +214,9 @@ export async function listCarsFull(): Promise<CarFull[]> {
     model: (r.get("model") as string) ?? "",
     regoExpiry: (r.get("rego_expiry") as string) ?? null,
     totalInvested: (r.get("total_invested") as number) ?? 0,
+    purchaseDate: (r.get("purchase_date") as string) ?? null,
   }));
-}
+});
 
 export type TransactionRecord = {
   carIds: string[];
@@ -227,22 +226,18 @@ export type TransactionRecord = {
   date: string; // YYYY-MM-DD
 };
 
-export async function listAllTransactions(): Promise<TransactionRecord[]> {
-  const records = await getBase()(TABLES.transactions)
-    .select({
-      fields: ["Car", "Type", "Category", "Amount", "Date"],
-      sort: [{ field: "Date", direction: "asc" }],
-    })
-    .all();
-
-  return records.map((r) => ({
-    carIds: (r.get("Car") as string[]) ?? [],
-    type: r.get("Type") as TransactionType,
-    category: (r.get("Category") as string) ?? "",
-    amount: (r.get("Amount") as number) ?? 0,
-    date: (r.get("Date") as string) ?? "",
-  }));
-}
+export const listAllTransactions = cache(async (): Promise<TransactionRecord[]> => {
+  const records = await listTransactionRecords();
+  return records
+    .map((r) => ({
+      carIds: (r.get("Car") as string[]) ?? [],
+      type: r.get("Type") as TransactionType,
+      category: (r.get("Category") as string) ?? "",
+      amount: (r.get("Amount") as number) ?? 0,
+      date: (r.get("Date") as string) ?? "",
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+});
 
 export type RenterRecord = {
   id: string;
@@ -250,7 +245,7 @@ export type RenterRecord = {
   driveFolderUrl: string | null;
 };
 
-export async function listRenters(): Promise<RenterRecord[]> {
+export const listRenters = cache(async (): Promise<RenterRecord[]> => {
   const records = await getBase()(TABLES.renters)
     .select({ fields: ["name", "drive_folder_url"] })
     .all();
@@ -260,7 +255,7 @@ export async function listRenters(): Promise<RenterRecord[]> {
     name: (r.get("name") as string) ?? "",
     driveFolderUrl: (r.get("drive_folder_url") as string) ?? null,
   }));
-}
+});
 
 export type ContractRecord = {
   id: string;
@@ -275,7 +270,7 @@ export type ContractRecord = {
   driveFolderUrl: string | null;
 };
 
-export async function listContracts(): Promise<ContractRecord[]> {
+export const listContracts = cache(async (): Promise<ContractRecord[]> => {
   const records = await getBase()(TABLES.contracts)
     .select({
       fields: [
@@ -305,4 +300,4 @@ export async function listContracts(): Promise<ContractRecord[]> {
     status: (r.get("contract_status") as string) ?? "—",
     driveFolderUrl: (r.get("drive_folder_url") as string) ?? null,
   }));
-}
+});

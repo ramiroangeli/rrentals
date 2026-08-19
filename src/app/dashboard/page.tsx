@@ -6,6 +6,7 @@ import { logout } from "@/app/actions/auth";
 import { AppNav } from "@/components/AppNav";
 import { CarDashboardCard } from "@/components/CarDashboardCard";
 import { FleetSummaryCard } from "@/components/FleetSummaryCard";
+import { PaymentAlarmCard } from "@/components/PaymentAlarmCard";
 import { PeriodFilterForm } from "@/components/PeriodFilterForm";
 import { Stat } from "@/components/Stat";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
@@ -49,6 +50,8 @@ export default async function DashboardPage({
       </header>
 
       <div className="space-y-4">
+        <PaymentAlarmCard cars={cars} />
+
         <FleetSummaryCard summary={fleetSummary} />
 
         <PeriodFilterForm resetHref="/dashboard" from={from} to={to} />

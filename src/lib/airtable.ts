@@ -69,8 +69,10 @@ export const EXPENSE_CATEGORY_GROUPS: { label: string; categories: readonly stri
   { label: "Gastos operativos", categories: OPERATING_EXPENSE_CATEGORIES },
 ];
 
+export const RENTAL_INCOME_CATEGORY = "Rental Income";
+
 export const CATEGORIES: Record<TransactionType, string[]> = {
-  Income: ["Rental Income", "Bond Received", "Other Income"],
+  Income: [RENTAL_INCOME_CATEGORY, "Bond Received", "Other Income"],
   Expense: [...SETUP_CATEGORIES, ...OPERATING_EXPENSE_CATEGORIES],
 };
 
@@ -197,12 +199,21 @@ export type CarFull = {
   regoExpiry: string | null; // YYYY-MM-DD
   totalInvested: number;
   purchaseDate: string | null; // YYYY-MM-DD
+  paymentDay: string | null; // "Lunes".."Domingo"
 };
 
 export const listCarsFull = cache(async (): Promise<CarFull[]> => {
   const records = await getBase()(TABLES.cars)
     .select({
-      fields: ["REGO", "make", "model", "rego_expiry", "total_invested", "purchase_date"],
+      fields: [
+        "REGO",
+        "make",
+        "model",
+        "rego_expiry",
+        "total_invested",
+        "purchase_date",
+        "payment_day",
+      ],
       sort: [{ field: "REGO", direction: "asc" }],
     })
     .all();
@@ -215,6 +226,7 @@ export const listCarsFull = cache(async (): Promise<CarFull[]> => {
     regoExpiry: (r.get("rego_expiry") as string) ?? null,
     totalInvested: (r.get("total_invested") as number) ?? 0,
     purchaseDate: (r.get("purchase_date") as string) ?? null,
+    paymentDay: (r.get("payment_day") as string) ?? null,
   }));
 });
 

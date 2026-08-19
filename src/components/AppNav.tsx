@@ -23,7 +23,7 @@ export function AppNav() {
             href={tab.href}
             className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
               active
-                ? "bg-teal-700 text-white dark:bg-teal-500 dark:text-teal-950"
+                ? "bg-violet-700 text-white dark:bg-violet-500 dark:text-violet-950"
                 : "text-zinc-500 dark:text-zinc-400"
             }`}
           >

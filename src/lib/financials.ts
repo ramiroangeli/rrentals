@@ -2,6 +2,7 @@ import {
   listCarsFull,
   listAllTransactions,
   SETUP_CATEGORIES,
+  RENTAL_INCOME_CATEGORY,
   type CarFull,
   type TransactionType,
 } from "@/lib/airtable";
@@ -29,7 +30,13 @@ export type CarFinancials = CarFull & {
   breakevenDate: string | null; // YYYY-MM-DD, aproximada
   regoStatus: RegoStatus;
   roiAnnualized: number | null; // breakevenProgress dividido los años desde purchaseDate
+  paymentStatus: PaymentStatus | null; // null si el auto no tiene payment_day cargado
 };
+
+export type PaymentStatus =
+  | { level: "paid"; dueDate: string; nextDueDate: string }
+  | { level: "due-today"; dueDate: string }
+  | { level: "overdue"; dueDate: string; daysLate: number };
 
 export type PeriodMetrics = {
   from: string | null; // YYYY-MM-DD, null = desde la primera transacción del set
@@ -94,6 +101,73 @@ function yearsSince(dateIso: string): number {
   return (startOfToday().getTime() - parseISODate(dateIso).getTime()) / (365.25 * 86_400_000);
 }
 
+// Coincide con las opciones del campo payment_day en Airtable: L, M, X, J, V, S, D.
+const WEEKDAY_INDEX: Record<string, number> = {
+  D: 0,
+  L: 1,
+  M: 2,
+  X: 3,
+  J: 4,
+  V: 5,
+  S: 6,
+};
+
+const WEEKDAY_LABEL: Record<string, string> = {
+  D: "domingo",
+  L: "lunes",
+  M: "martes",
+  X: "miércoles",
+  J: "jueves",
+  V: "viernes",
+  S: "sábado",
+};
+
+function toISODate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 86_400_000);
+}
+
+// Última ocurrencia de paymentDay que cae hoy o antes — es el "vencimiento" del
+// ciclo semanal actual. Se recalcula solo con hoy + el día de la semana, no
+// depende de guardar ningún estado de "cuándo vence la próxima".
+function mostRecentOccurrence(weekday: number, today: Date): Date {
+  const diff = (today.getDay() - weekday + 7) % 7;
+  return addDays(today, -diff);
+}
+
+export function paymentDayLabel(paymentDay: string): string {
+  return WEEKDAY_LABEL[paymentDay] ?? paymentDay;
+}
+
+function getPaymentStatus(
+  paymentDay: string | null,
+  lastRentalIncomeDate: string | null
+): PaymentStatus | null {
+  const weekday = paymentDay ? WEEKDAY_INDEX[paymentDay] : undefined;
+  if (weekday === undefined) return null;
+
+  const today = startOfToday();
+  const dueDate = mostRecentOccurrence(weekday, today);
+  const dueDateIso = toISODate(dueDate);
+
+  if (lastRentalIncomeDate && lastRentalIncomeDate >= dueDateIso) {
+    return { level: "paid", dueDate: dueDateIso, nextDueDate: toISODate(addDays(dueDate, 7)) };
+  }
+
+  if (dueDateIso === toISODate(today)) {
+    return { level: "due-today", dueDate: dueDateIso };
+  }
+
+  const daysLate = Math.round((today.getTime() - dueDate.getTime()) / 86_400_000);
+  return { level: "overdue", dueDate: dueDateIso, daysLate };
+}
+
 export async function getCarFinancials(): Promise<CarFinancials[]> {
   const [cars, transactions] = await Promise.all([listCarsFull(), listAllTransactions()]);
 
@@ -111,12 +185,16 @@ export async function getCarFinancials(): Promise<CarFinancials[]> {
     let setupCost = 0;
     let running = 0;
     let breakevenDate: string | null = null;
+    let lastRentalIncomeDate: string | null = null;
 
     for (const tx of carTransactions) {
       if (tx.type === "Income") {
         totalIncome += tx.amount;
         running += tx.amount;
         addToBreakdown(incomeMap, tx.category || "Sin categoría", tx.amount);
+        if (tx.category === RENTAL_INCOME_CATEGORY) {
+          lastRentalIncomeDate = tx.date;
+        }
       } else if (SETUP_CATEGORY_SET.has(tx.category)) {
         setupCost += tx.amount;
         addToBreakdown(setupMap, tx.category, tx.amount);
@@ -155,6 +233,7 @@ export async function getCarFinancials(): Promise<CarFinancials[]> {
       breakevenDate,
       regoStatus: computeRegoStatus(car.regoExpiry),
       roiAnnualized,
+      paymentStatus: getPaymentStatus(car.paymentDay, lastRentalIncomeDate),
     };
   });
 }

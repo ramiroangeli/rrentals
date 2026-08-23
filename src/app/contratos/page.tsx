@@ -2,8 +2,7 @@ import { headers } from "next/headers";
 import { verifySession } from "@/lib/dal";
 import { listContractViews } from "@/lib/contracts";
 import { listContracts, listRentersFull, listCarsFull } from "@/lib/airtable";
-import { logout } from "@/app/actions/auth";
-import { AppNav } from "@/components/AppNav";
+import { AppHeader } from "@/components/AppHeader";
 import { ContractCard } from "@/components/ContractCard";
 import { PendingContractCard } from "@/components/PendingContractCard";
 
@@ -30,14 +29,7 @@ export default async function ContratosPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-10 pt-6">
-      <header className="mb-6 flex items-center justify-between">
-        <AppNav />
-        <form action={logout}>
-          <button type="submit" className="text-sm text-zinc-500 underline">
-            Salir
-          </button>
-        </form>
-      </header>
+      <AppHeader />
 
       <div className="space-y-4">
         {pending.length > 0 && (

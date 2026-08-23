@@ -1,8 +1,7 @@
 import { verifySession } from "@/lib/dal";
 import { listCars } from "@/lib/airtable";
 import { TransactionForm } from "@/components/TransactionForm";
-import { logout } from "@/app/actions/auth";
-import { AppNav } from "@/components/AppNav";
+import { AppHeader } from "@/components/AppHeader";
 
 export default async function Home() {
   await verifySession();
@@ -10,14 +9,7 @@ export default async function Home() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-10 pt-6">
-      <header className="mb-6 flex items-center justify-between">
-        <AppNav />
-        <form action={logout}>
-          <button type="submit" className="text-sm text-zinc-500 underline">
-            Salir
-          </button>
-        </form>
-      </header>
+      <AppHeader />
       <TransactionForm cars={cars} />
     </div>
   );

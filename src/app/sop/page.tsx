@@ -1,6 +1,5 @@
 import { verifySession } from "@/lib/dal";
-import { logout } from "@/app/actions/auth";
-import { AppNav } from "@/components/AppNav";
+import { AppHeader } from "@/components/AppHeader";
 
 function LinkRow({ label, href }: { label: string; href: string }) {
   return (
@@ -41,19 +40,16 @@ export default async function SopPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-10 pt-6">
-      <header className="mb-6 flex items-center justify-between">
-        <AppNav />
-        <form action={logout}>
-          <button type="submit" className="text-sm text-zinc-500 underline">
-            Salir
-          </button>
-        </form>
-      </header>
+      <AppHeader />
 
       <div className="space-y-4">
         <Card title="🔗 Links rápidos">
           <div className="space-y-2">
             <LinkRow label="App en producción" href="https://rrentals.vercel.app" />
+            <LinkRow
+              label="Formulario de nuevo alquiler"
+              href="https://rrentals.vercel.app/nuevo-alquiler"
+            />
             <LinkRow
               label="Dashboard de Vercel"
               href="https://vercel.com/ramiromangeli-4861s-projects/rrentals"

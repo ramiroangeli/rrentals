@@ -2,8 +2,7 @@ import Link from "next/link";
 import { verifySession } from "@/lib/dal";
 import { getCarFinancials, getFleetSummary, getPeriodMetrics } from "@/lib/financials";
 import { listAllTransactions } from "@/lib/airtable";
-import { logout } from "@/app/actions/auth";
-import { AppNav } from "@/components/AppNav";
+import { AppHeader } from "@/components/AppHeader";
 import { CarDashboardCard } from "@/components/CarDashboardCard";
 import { FleetSummaryCard } from "@/components/FleetSummaryCard";
 import { PaymentAlarmCard } from "@/components/PaymentAlarmCard";
@@ -40,14 +39,7 @@ export default async function DashboardPage({
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-10 pt-6">
-      <header className="mb-6 flex items-center justify-between">
-        <AppNav />
-        <form action={logout}>
-          <button type="submit" className="text-sm text-zinc-500 underline">
-            Salir
-          </button>
-        </form>
-      </header>
+      <AppHeader />
 
       <div className="space-y-4">
         <PaymentAlarmCard cars={cars} />

@@ -12,6 +12,11 @@ export type ContractView = {
   bond: number;
   status: string;
   contractDocsUrl: string | null;
+  signedName: string | null;
+  signedAt: string | null;
+  kmStart: number | null;
+  kmEnd: number | null;
+  returnDate: string | null;
 };
 
 export async function listContractViews(): Promise<ContractView[]> {
@@ -31,15 +36,51 @@ export async function listContractViews(): Promise<ContractView[]> {
     return {
       id: contract.id,
       contractId: contract.contractId,
-      renterName: renter?.name ?? "—",
+      renterName: renter?.name ?? "-",
       renterDocsUrl: renter?.driveFolderUrl ?? null,
-      carLabel: car ? `${car.rego} — ${car.make} ${car.model}` : "—",
+      carLabel: car ? `${car.rego} - ${car.make} ${car.model}` : "-",
       startDate: contract.startDate,
       endDate: contract.endDate,
       weeklyRate: contract.weeklyRate,
       bond: contract.bond,
       status: contract.status,
       contractDocsUrl: contract.driveFolderUrl,
+      signedName: contract.signedName,
+      signedAt: contract.signedAt,
+      kmStart: contract.kmStart,
+      kmEnd: contract.kmEnd,
+      returnDate: contract.returnDate,
     };
   });
+}
+
+export type KmUsage = {
+  daysRented: number;
+  kmDriven: number;
+  kmLimit: number;
+  withinLimit: boolean;
+};
+
+function parseISODate(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// Límite del contrato: 25.000 km/año, proporcional a los días reales del alquiler.
+const ANNUAL_KM_LIMIT = 25_000;
+
+export function computeKmUsage(
+  startDate: string,
+  returnDate: string,
+  kmStart: number,
+  kmEnd: number
+): KmUsage {
+  const daysRented = Math.max(
+    1,
+    Math.round((parseISODate(returnDate).getTime() - parseISODate(startDate).getTime()) / 86_400_000) + 1
+  );
+  const kmLimit = Math.round((ANNUAL_KM_LIMIT * daysRented) / 365);
+  const kmDriven = kmEnd - kmStart;
+
+  return { daysRented, kmDriven, kmLimit, withinLimit: kmDriven <= kmLimit };
 }

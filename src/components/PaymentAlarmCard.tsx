@@ -31,7 +31,7 @@ export function PaymentAlarmCard({ cars }: { cars: CarFinancials[] }) {
           <div key={car.id} className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                {car.rego} — {car.make} {car.model}
+                {car.rego} - {car.make} {car.model}
               </div>
               <div className="text-xs text-zinc-500 dark:text-zinc-400">
                 Cobra los {paymentDayLabel(car.paymentDay)}

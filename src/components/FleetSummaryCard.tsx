@@ -11,14 +11,14 @@ export function FleetSummaryCard({ summary }: { summary: FleetSummary }) {
   return (
     <div className="rounded-2xl bg-gradient-to-br from-teal-700 to-teal-900 p-5 text-white shadow-md">
       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-teal-200">
-        Resumen general — 3 autos
+        Resumen general - 3 autos
       </h2>
 
       <div className="mb-4 grid grid-cols-2 gap-4">
         <div>
           <div className="text-xs text-teal-200">Invertido</div>
           <div className="text-2xl font-bold tabular-nums">
-            {hasInvestment ? formatCurrency(summary.totalInvested) : "—"}
+            {hasInvestment ? formatCurrency(summary.totalInvested) : "-"}
           </div>
         </div>
         <div>

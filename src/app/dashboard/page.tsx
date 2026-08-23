@@ -59,8 +59,8 @@ export default async function DashboardPage({
         {fleetPeriod && (
           <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Período: {fleetPeriod.from ? formatDateAU(fleetPeriod.from) : "—"} al{" "}
-              {fleetPeriod.to ? formatDateAU(fleetPeriod.to) : "—"}
+              Período: {fleetPeriod.from ? formatDateAU(fleetPeriod.from) : "-"} al{" "}
+              {fleetPeriod.to ? formatDateAU(fleetPeriod.to) : "-"}
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <Stat
@@ -83,7 +83,7 @@ export default async function DashboardPage({
                 value={
                   fleetPeriod.operatingMargin !== null
                     ? formatPercent(fleetPeriod.operatingMargin)
-                    : "—"
+                    : "-"
                 }
               />
             </div>

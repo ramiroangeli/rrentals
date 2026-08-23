@@ -55,7 +55,7 @@ export default async function CarDetailPage({
       </Link>
 
       <h1 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-        {car.rego} — {car.make} {car.model}
+        {car.rego} - {car.make} {car.model}
       </h1>
 
       <section className="mb-4 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
@@ -82,12 +82,12 @@ export default async function CarDetailPage({
           />
           <Stat
             label="ROI acumulado"
-            value={car.totalInvested > 0 ? formatPercent(car.breakevenProgress) : "—"}
+            value={car.totalInvested > 0 ? formatPercent(car.breakevenProgress) : "-"}
             tone={car.breakevenProgress >= 0 ? "positive" : "negative"}
           />
           <Stat
             label="ROI anualizado"
-            value={car.roiAnnualized !== null ? formatPercent(car.roiAnnualized) : "—"}
+            value={car.roiAnnualized !== null ? formatPercent(car.roiAnnualized) : "-"}
             tone={car.roiAnnualized !== null && car.roiAnnualized >= 0 ? "positive" : "negative"}
           />
         </div>
@@ -108,8 +108,8 @@ export default async function CarDetailPage({
       <section className="mb-4 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           {from || to
-            ? `Período: ${period.from ? formatDateAU(period.from) : "—"} al ${
-                period.to ? formatDateAU(period.to) : "—"
+            ? `Período: ${period.from ? formatDateAU(period.from) : "-"} al ${
+                period.to ? formatDateAU(period.to) : "-"
               }`
             : "Indicadores de todo el historial"}
         </h2>
@@ -131,7 +131,7 @@ export default async function CarDetailPage({
           />
           <Stat
             label="Margen operativo"
-            value={period.operatingMargin !== null ? formatPercent(period.operatingMargin) : "—"}
+            value={period.operatingMargin !== null ? formatPercent(period.operatingMargin) : "-"}
           />
         </div>
         <div className="mt-3 grid grid-cols-2 gap-4 border-t border-zinc-100 pt-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">

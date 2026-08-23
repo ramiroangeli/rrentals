@@ -8,6 +8,7 @@ const TABS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/contratos", label: "Contratos" },
   { href: "/historial", label: "Historial" },
+  { href: "/sop", label: "SOP" },
 ] as const;
 
 export function AppNav() {

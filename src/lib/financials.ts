@@ -133,7 +133,7 @@ function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 86_400_000);
 }
 
-// Última ocurrencia de paymentDay que cae hoy o antes — es el "vencimiento" del
+// Última ocurrencia de paymentDay que cae hoy o antes - es el "vencimiento" del
 // ciclo semanal actual. Se recalcula solo con hoy + el día de la semana, no
 // depende de guardar ningún estado de "cuándo vence la próxima".
 function mostRecentOccurrence(weekday: number, today: Date): Date {

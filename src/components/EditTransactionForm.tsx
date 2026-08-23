@@ -62,7 +62,7 @@ export function EditTransactionForm({
           </option>
           {cars.map((car) => (
             <option key={car.id} value={car.id}>
-              {car.rego} — {car.make} {car.model}
+              {car.rego} - {car.make} {car.model}
             </option>
           ))}
         </select>

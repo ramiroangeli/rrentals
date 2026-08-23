@@ -1,21 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decrypt, COOKIE_NAME } from "@/lib/session";
 
-const PUBLIC_PATHS = ["/login"];
+// El login: no requiere sesión, y si ya estás logueado te saca de ahí.
+const AUTH_PATH = "/login";
+
+// /nuevo-alquiler y /firmar son públicas a propósito: las completa el
+// inquilino, que nunca tiene sesión - pero a diferencia de /login, un usuario
+// logueado (Ramiro) también puede entrar ahí sin que lo redirija (para
+// probar el formulario o revisar un contrato antes de mandar el link).
+const OPEN_PATHS = ["/nuevo-alquiler", "/firmar"];
 
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  const isPublicPath = PUBLIC_PATHS.some((p) => path.startsWith(p));
+  const isAuthPath = path.startsWith(AUTH_PATH);
+  const isOpenPath = OPEN_PATHS.some((p) => path.startsWith(p));
+
+  if (isOpenPath) return NextResponse.next();
 
   const cookie = req.cookies.get(COOKIE_NAME)?.value;
   const session = await decrypt(cookie);
   const isAuthenticated = !!session?.authenticated;
 
-  if (!isAuthenticated && !isPublicPath) {
+  if (!isAuthenticated && !isAuthPath) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  if (isAuthenticated && isPublicPath) {
+  if (isAuthenticated && isAuthPath) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 

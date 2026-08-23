@@ -10,7 +10,7 @@ export async function listTransactionViews(): Promise<TransactionView[]> {
     const car = carById.get(tx.carId);
     return {
       ...tx,
-      carLabel: car ? `${car.rego} — ${car.make} ${car.model}` : "—",
+      carLabel: car ? `${car.rego} - ${car.make} ${car.model}` : "-",
     };
   });
 }

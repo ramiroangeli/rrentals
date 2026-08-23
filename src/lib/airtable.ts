@@ -35,7 +35,7 @@ export type Car = {
 // Deriva de listCarsFull (más abajo) en vez de pegarle a Airtable de nuevo:
 // react cache() memoiza por función, así que dos funciones distintas that
 // pidan la tabla cars siempre cuentan como 2 llamadas de red aunque pidan
-// los mismos campos — por eso listCars() reusa el resultado de listCarsFull().
+// los mismos campos - por eso listCars() reusa el resultado de listCarsFull().
 export async function listCars(): Promise<Car[]> {
   const cars = await listCarsFull();
   return cars.map(({ id, rego, make, model }) => ({ id, rego, make, model }));
@@ -43,7 +43,7 @@ export async function listCars(): Promise<Car[]> {
 
 export type TransactionType = "Income" | "Expense";
 
-// Costos únicos de puesta en marcha del auto (transferencia, llaves, etc.) — se
+// Costos únicos de puesta en marcha del auto (transferencia, llaves, etc.) - se
 // suman al total_invested del auto en vez de restar como gasto operativo del mes.
 export const SETUP_CATEGORIES = [
   "Transferencia de dominio",
@@ -149,7 +149,7 @@ function toTransactionFull(r: Airtable.Record<Airtable.FieldSet>): TransactionFu
   };
 }
 
-// Única lectura real de la tabla transactions, cacheada por request — tanto
+// Única lectura real de la tabla transactions, cacheada por request - tanto
 // listTransactionsFull() como listAllTransactions() derivan de acá en vez de
 // pedirle lo mismo a Airtable dos veces con distinta forma.
 const listTransactionRecords = cache(async () => {
@@ -196,10 +196,14 @@ export type CarFull = {
   rego: string;
   make: string;
   model: string;
+  year: number | null;
+  vin: string | null;
+  weeklyRate: number;
   regoExpiry: string | null; // YYYY-MM-DD
   totalInvested: number;
   purchaseDate: string | null; // YYYY-MM-DD
   paymentDay: string | null; // "Lunes".."Domingo"
+  status: string | null; // "Rented", "Disponible", etc. - se edita a mano en Airtable
 };
 
 export const listCarsFull = cache(async (): Promise<CarFull[]> => {
@@ -209,10 +213,14 @@ export const listCarsFull = cache(async (): Promise<CarFull[]> => {
         "REGO",
         "make",
         "model",
+        "year",
+        "VIN",
+        "weekly_rate",
         "rego_expiry",
         "total_invested",
         "purchase_date",
         "payment_day",
+        "status",
       ],
       sort: [{ field: "REGO", direction: "asc" }],
     })
@@ -223,10 +231,14 @@ export const listCarsFull = cache(async (): Promise<CarFull[]> => {
     rego: (r.get("REGO") as string) ?? "",
     make: (r.get("make") as string) ?? "",
     model: (r.get("model") as string) ?? "",
+    year: (r.get("year") as number) ?? null,
+    vin: (r.get("VIN") as string) ?? null,
+    weeklyRate: (r.get("weekly_rate") as number) ?? 0,
     regoExpiry: (r.get("rego_expiry") as string) ?? null,
     totalInvested: (r.get("total_invested") as number) ?? 0,
     purchaseDate: (r.get("purchase_date") as string) ?? null,
     paymentDay: (r.get("payment_day") as string) ?? null,
+    status: (r.get("status") as string) ?? null,
   }));
 });
 
@@ -257,17 +269,106 @@ export type RenterRecord = {
   driveFolderUrl: string | null;
 };
 
-export const listRenters = cache(async (): Promise<RenterRecord[]> => {
+export type RenterFull = {
+  id: string;
+  name: string;
+  address: string;
+  nationality: string;
+  phone: string;
+  whatsapp: string | null;
+  passportNumber: string | null;
+  licenceNumber: string;
+  licenceIssuingCountry: string;
+  licenceExpiry: string | null; // YYYY-MM-DD
+  qldCrn: string;
+  dateOfBirth: string | null; // YYYY-MM-DD
+  driveFolderUrl: string | null;
+};
+
+// Única lectura real de la tabla renters - listRenters() (vista liviana, usada
+// por los selects de auto/contrato) deriva de acá en vez de pedirle a Airtable
+// lo mismo dos veces, mismo patrón que cars y transactions.
+export const listRentersFull = cache(async (): Promise<RenterFull[]> => {
   const records = await getBase()(TABLES.renters)
-    .select({ fields: ["name", "drive_folder_url"] })
+    .select({
+      fields: [
+        "name",
+        "address",
+        "nationality",
+        "phone",
+        "whatsapp",
+        "passport_number",
+        "licence_number",
+        "licence_issuing_country",
+        "licence_expiry",
+        "QLD_CRN",
+        "date_of_birth",
+        "drive_folder_url",
+      ],
+    })
     .all();
 
   return records.map((r) => ({
     id: r.id,
     name: (r.get("name") as string) ?? "",
+    address: (r.get("address") as string) ?? "",
+    nationality: (r.get("nationality") as string) ?? "",
+    phone: (r.get("phone") as string) ?? "",
+    whatsapp: (r.get("whatsapp") as string) ?? null,
+    passportNumber: (r.get("passport_number") as string) ?? null,
+    licenceNumber: (r.get("licence_number") as string) ?? "",
+    licenceIssuingCountry: (r.get("licence_issuing_country") as string) ?? "",
+    licenceExpiry: (r.get("licence_expiry") as string) ?? null,
+    qldCrn: r.get("QLD_CRN") != null ? String(r.get("QLD_CRN")) : "",
+    dateOfBirth: (r.get("date_of_birth") as string) ?? null,
     driveFolderUrl: (r.get("drive_folder_url") as string) ?? null,
   }));
 });
+
+export async function listRenters(): Promise<RenterRecord[]> {
+  const renters = await listRentersFull();
+  return renters.map(({ id, name, driveFolderUrl }) => ({ id, name, driveFolderUrl }));
+}
+
+export const getRenter = cache(async (id: string): Promise<RenterFull | null> => {
+  const renters = await listRentersFull();
+  return renters.find((r) => r.id === id) ?? null;
+});
+
+export type NewRenter = {
+  name: string;
+  address: string;
+  nationality: string;
+  phone: string;
+  whatsapp: string | null;
+  passportNumber: string | null;
+  licenceNumber: string;
+  licenceIssuingCountry: string;
+  licenceExpiry: string | null; // YYYY-MM-DD
+  qldCrn: string;
+  dateOfBirth: string; // YYYY-MM-DD
+  driveFolderUrl: string | null;
+};
+
+export async function createRenter(input: NewRenter): Promise<string> {
+  const fields: Partial<Airtable.FieldSet> = {
+    name: input.name,
+    address: input.address,
+    nationality: input.nationality,
+    phone: input.phone,
+    licence_number: input.licenceNumber,
+    licence_issuing_country: input.licenceIssuingCountry,
+    date_of_birth: input.dateOfBirth,
+  };
+  if (input.whatsapp) fields.whatsapp = input.whatsapp;
+  if (input.passportNumber) fields.passport_number = input.passportNumber;
+  if (input.licenceExpiry) fields.licence_expiry = input.licenceExpiry;
+  if (input.driveFolderUrl) fields.drive_folder_url = input.driveFolderUrl;
+  if (input.qldCrn) fields.QLD_CRN = Number(input.qldCrn);
+
+  const record = await getBase()(TABLES.renters).create(fields, { typecast: true });
+  return record.id;
+}
 
 export type ContractRecord = {
   id: string;
@@ -280,6 +381,11 @@ export type ContractRecord = {
   bond: number;
   status: string;
   driveFolderUrl: string | null;
+  signedName: string | null;
+  signedAt: string | null;
+  kmStart: number | null;
+  kmEnd: number | null;
+  returnDate: string | null; // YYYY-MM-DD, fecha real de devolución
 };
 
 export const listContracts = cache(async (): Promise<ContractRecord[]> => {
@@ -295,6 +401,11 @@ export const listContracts = cache(async (): Promise<ContractRecord[]> => {
         "bond",
         "contract_status",
         "drive_folder_url",
+        "signed_name",
+        "signed_at",
+        "km_start",
+        "km_end",
+        "return_date",
       ],
       sort: [{ field: "start_date", direction: "desc" }],
     })
@@ -309,7 +420,91 @@ export const listContracts = cache(async (): Promise<ContractRecord[]> => {
     endDate: (r.get("estimated_end_date") as string) ?? null,
     weeklyRate: (r.get("weekly_rate") as number) ?? 0,
     bond: (r.get("bond") as number) ?? 0,
-    status: (r.get("contract_status") as string) ?? "—",
+    status: (r.get("contract_status") as string) ?? "-",
     driveFolderUrl: (r.get("drive_folder_url") as string) ?? null,
+    signedName: (r.get("signed_name") as string) ?? null,
+    signedAt: (r.get("signed_at") as string) ?? null,
+    kmStart: (r.get("km_start") as number) ?? null,
+    kmEnd: (r.get("km_end") as number) ?? null,
+    returnDate: (r.get("return_date") as string) ?? null,
   }));
 });
+
+export const getContract = cache(async (id: string): Promise<ContractRecord | null> => {
+  const contracts = await listContracts();
+  return contracts.find((c) => c.id === id) ?? null;
+});
+
+// "CTR-001", "CTR-002"... - sigue la numeración que ya se venía usando a mano.
+function nextContractId(existingIds: string[]): string {
+  const numbers = existingIds
+    .map((id) => /^CTR-(\d+)$/.exec(id))
+    .filter((m): m is RegExpExecArray => m !== null)
+    .map((m) => Number(m[1]));
+  const next = (numbers.length > 0 ? Math.max(...numbers) : 0) + 1;
+  return `CTR-${String(next).padStart(3, "0")}`;
+}
+
+export type NewContract = {
+  renterId: string;
+  carId: string;
+  startDate: string; // YYYY-MM-DD
+  weeklyRate: number;
+  bond: number;
+  status: string;
+};
+
+export async function createContract(
+  input: NewContract
+): Promise<{ id: string; contractId: string }> {
+  const existing = await listContracts();
+  const contractId = nextContractId(existing.map((c) => c.contractId));
+
+  const record = await getBase()(TABLES.contracts).create(
+    {
+      contract_id: contractId,
+      Renter: [input.renterId],
+      Car: [input.carId],
+      start_date: input.startDate,
+      weekly_rate: input.weeklyRate,
+      bond: input.bond,
+      contract_status: input.status,
+    },
+    // typecast crea el valor "Pendiente" de contract_status la primera vez que se usa.
+    { typecast: true }
+  );
+  return { id: record.id, contractId };
+}
+
+export async function updateContractStatus(id: string, status: string): Promise<void> {
+  await getBase()(TABLES.contracts).update(id, { contract_status: status }, { typecast: true });
+}
+
+export async function updateContractBond(id: string, bond: number): Promise<void> {
+  await getBase()(TABLES.contracts).update(id, { bond });
+}
+
+export async function signContract(
+  id: string,
+  signedName: string,
+  signedAt: string
+): Promise<void> {
+  await getBase()(TABLES.contracts).update(id, { signed_name: signedName, signed_at: signedAt });
+}
+
+export async function updateContractKmStart(id: string, kmStart: number): Promise<void> {
+  await getBase()(TABLES.contracts).update(id, { km_start: kmStart });
+}
+
+export async function markContractReturned(
+  id: string,
+  kmEnd: number,
+  returnDate: string
+): Promise<void> {
+  await getBase()(TABLES.contracts).update(
+    id,
+    { km_end: kmEnd, return_date: returnDate, contract_status: "Finalizado" },
+    // typecast crea el valor "Finalizado" de contract_status la primera vez que se usa.
+    { typecast: true }
+  );
+}

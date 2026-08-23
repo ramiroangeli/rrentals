@@ -27,7 +27,7 @@ function RegoBanner({ car }: { car: CarFinancials }) {
       }`}
     >
       {isExpired
-        ? `REGO VENCIDA — venció el ${dateLabel} (hace ${regoStatus.daysAgo} días)`
+        ? `REGO VENCIDA - venció el ${dateLabel} (hace ${regoStatus.daysAgo} días)`
         : `Rego vence el ${dateLabel} (en ${regoStatus.daysLeft} días)`}
     </div>
   );
@@ -58,13 +58,13 @@ export function CarDashboardCard({
       <RegoBanner car={car} />
 
       <h2 className="mb-3 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-        {car.rego} — {car.make} {car.model}
+        {car.rego} - {car.make} {car.model}
       </h2>
 
       <div className="mb-4 grid grid-cols-2 gap-4">
         <Stat
           label="Invertido"
-          value={hasInvestment ? formatCurrency(car.totalInvested) : "—"}
+          value={hasInvestment ? formatCurrency(car.totalInvested) : "-"}
           breakdown={
             car.setupCost > 0 ? (
               <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">

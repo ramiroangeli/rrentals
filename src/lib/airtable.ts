@@ -285,28 +285,42 @@ export type RenterFull = {
   driveFolderUrl: string | null;
 };
 
+const RENTER_FIELDS = [
+  "name",
+  "address",
+  "nationality",
+  "phone",
+  "whatsapp",
+  "passport_number",
+  "licence_number",
+  "licence_issuing_country",
+  "licence_expiry",
+  "QLD_CRN",
+  "date_of_birth",
+  "drive_folder_url",
+];
+
 // Única lectura real de la tabla renters - listRenters() (vista liviana, usada
 // por los selects de auto/contrato) deriva de acá en vez de pedirle a Airtable
 // lo mismo dos veces, mismo patrón que cars y transactions.
+//
+// "whatsapp" es un campo que se agregó después y puede no existir todavía en
+// la base (Airtable tira error ante cualquier campo desconocido en el select,
+// no lo ignora solo). Si falla por eso puntual, reintenta sin pedirlo, para
+// que el resto de la app no se caiga mientras tanto.
 export const listRentersFull = cache(async (): Promise<RenterFull[]> => {
-  const records = await getBase()(TABLES.renters)
-    .select({
-      fields: [
-        "name",
-        "address",
-        "nationality",
-        "phone",
-        "whatsapp",
-        "passport_number",
-        "licence_number",
-        "licence_issuing_country",
-        "licence_expiry",
-        "QLD_CRN",
-        "date_of_birth",
-        "drive_folder_url",
-      ],
-    })
-    .all();
+  let records;
+  try {
+    records = await getBase()(TABLES.renters).select({ fields: RENTER_FIELDS }).all();
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("whatsapp")) {
+      records = await getBase()(TABLES.renters)
+        .select({ fields: RENTER_FIELDS.filter((f) => f !== "whatsapp") })
+        .all();
+    } else {
+      throw e;
+    }
+  }
 
   return records.map((r) => ({
     id: r.id,
@@ -366,8 +380,19 @@ export async function createRenter(input: NewRenter): Promise<string> {
   if (input.driveFolderUrl) fields.drive_folder_url = input.driveFolderUrl;
   if (input.qldCrn) fields.QLD_CRN = Number(input.qldCrn);
 
-  const record = await getBase()(TABLES.renters).create(fields, { typecast: true });
-  return record.id;
+  try {
+    const record = await getBase()(TABLES.renters).create(fields, { typecast: true });
+    return record.id;
+  } catch (e) {
+    // Mismo caso que en listRentersFull: si "whatsapp" todavía no existe como
+    // campo, no perdemos el resto de la solicitud del inquilino por eso.
+    if (fields.whatsapp && e instanceof Error && e.message.includes("whatsapp")) {
+      const { whatsapp: _whatsapp, ...rest } = fields;
+      const record = await getBase()(TABLES.renters).create(rest, { typecast: true });
+      return record.id;
+    }
+    throw e;
+  }
 }
 
 export type ContractRecord = {

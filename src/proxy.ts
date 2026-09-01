@@ -8,7 +8,9 @@ const AUTH_PATH = "/login";
 // inquilino, que nunca tiene sesión - pero a diferencia de /login, un usuario
 // logueado (Ramiro) también puede entrar ahí sin que lo redirija (para
 // probar el formulario o revisar un contrato antes de mandar el link).
-const OPEN_PATHS = ["/nuevo-alquiler", "/firmar"];
+// /privacidad también es pública: la pide Google como requisito para
+// publicar la app de OAuth (ver /sop).
+const OPEN_PATHS = ["/nuevo-alquiler", "/firmar", "/privacidad"];
 
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;

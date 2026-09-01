@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { submitTransaction } from "@/app/actions/transactions";
-import { CATEGORIES, EXPENSE_CATEGORY_GROUPS, type Car, type TransactionType } from "@/lib/airtable";
+import type { Car } from "@/lib/airtable";
+import { CATEGORIES, EXPENSE_CATEGORY_GROUPS, type TransactionType } from "@/lib/categories";
 
 function todayISO() {
   const now = new Date();

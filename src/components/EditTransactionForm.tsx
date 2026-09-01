@@ -2,13 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { updateTransactionAction } from "@/app/actions/transactions";
-import {
-  CATEGORIES,
-  EXPENSE_CATEGORY_GROUPS,
-  type TransactionFull,
-  type Car,
-  type TransactionType,
-} from "@/lib/airtable";
+import type { TransactionFull, Car } from "@/lib/airtable";
+import { CATEGORIES, EXPENSE_CATEGORY_GROUPS, type TransactionType } from "@/lib/categories";
 
 export function EditTransactionForm({
   transaction,

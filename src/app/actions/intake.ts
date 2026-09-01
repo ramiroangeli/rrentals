@@ -126,9 +126,12 @@ export async function submitIntake(
       addRandomSuffix: false,
     });
     backupSaved = true;
-  } catch {
+  } catch (e) {
     // Sin red de contención para este envío puntual - seguimos con el flujo
-    // normal de todos modos, es la única chance que le queda.
+    // normal de todos modos, es la única chance que le queda. Se loguea para
+    // poder ver en los runtime logs de Vercel si esto está fallando siempre
+    // (ej. BLOB_READ_WRITE_TOKEN mal configurado) en vez de fallar mudo.
+    console.error("[intake] no se pudo guardar el backup en Blob:", errorMessage(e));
   }
 
   let pipelineError: string | null = null;
@@ -229,9 +232,10 @@ export async function submitIntake(
         JSON.stringify({ ...submissionData, driveFolderLink, renterId, error: pipelineError }, null, 2),
         { access: "private", contentType: "application/json", addRandomSuffix: false }
       );
-    } catch {
+    } catch (e) {
       // El backup original en intake-backups/ ya está guardado - sigue siendo
       // recuperable a mano aunque esta segunda copia no se pudiera escribir.
+      console.error("[intake] no se pudo guardar intake-needs-review:", errorMessage(e));
     }
   }
 

@@ -172,9 +172,12 @@ export function buildContractText(input: ContractTemplateInput): {
     {
       heading: "9. TERMINATION AND VEHICLE RECOVERY",
       body: [
-        "Either party may terminate this Agreement by giving 48 hours' written notice (including by SMS or " +
-          "email). Upon termination, the Lessee must return the Vehicle within the notice period and the weekly " +
-          "fee will be prorated to the date of return.",
+        "The Lessor may terminate this Agreement at any time by giving the Lessee 48 hours' written notice " +
+          "(including by SMS or email).",
+        "The Lessee may terminate this Agreement and return the Vehicle by giving the Lessor at least seven (7) " +
+          "days' written notice (including by SMS or email).",
+        "Upon termination by either party, the Lessee must return the Vehicle within the applicable notice " +
+          "period and the weekly fee will be prorated to the date of return.",
         "If the Lessee fails to return the Vehicle within the time required under a notice of termination, " +
           "abandons the Vehicle, or is unreachable for more than 24 hours after the return deadline, the Lessor " +
           "is entitled to take immediate possession of the Vehicle without further notice and at the Lessee's " +

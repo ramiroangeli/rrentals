@@ -161,9 +161,11 @@ export function buildContractText(input: ContractTemplateInput): {
     {
       heading: "8. VEHICLE CONDITION AND RETURN",
       body: [
-        "The Vehicle is provided in good working condition. The Lessee agrees to return the Vehicle in the same " +
-          "condition, fair wear and tear excepted, with the same fuel level as at delivery and free of personal " +
-          "belongings.",
+        "The Vehicle is provided in good working condition and with a full fuel tank. The Lessee agrees to " +
+          "return the Vehicle in the same condition, fair wear and tear excepted, free of personal belongings, " +
+          "and with a full fuel tank.",
+        "If the Vehicle is not returned with a full fuel tank, the cost of refuelling to full will be deducted " +
+          "from the security deposit.",
         "Any damage, cleaning requirements, repairs, or outstanding charges will be deducted from the security " +
           "deposit. If costs exceed the deposit, the Lessee agrees to pay the shortfall within seven days of " +
           "written notice.",

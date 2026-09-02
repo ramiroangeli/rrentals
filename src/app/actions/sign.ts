@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { signContract, getContract, getRenter, listCarsFull } from "@/lib/airtable";
-import { buildContractHtml, type LicenceType } from "@/lib/contractTemplate";
-import { uploadToDrive, renterFolderName } from "@/lib/googleDrive";
+import { buildContractHtml, type ContractTemplateInput, type LicenceType } from "@/lib/contractTemplate";
+import { buildContractPdf } from "@/lib/contractPdf";
+import { resolveRenterFolder, uploadFileToFolder, renterFolderName } from "@/lib/googleDrive";
 
 export type SignFormState = { error?: string } | undefined;
 
@@ -23,9 +24,9 @@ export async function submitSignature(
   const signedAt = new Date().toISOString();
   await signContract(contractId, signedName, signedAt);
 
-  // Guardar una copia del contrato firmado en la carpeta de Drive del
-  // inquilino. Best-effort: si Drive falla acá, la firma ya quedó grabada en
-  // Airtable, no tiene sentido bloquear al inquilino por esto.
+  // Guardar una copia (HTML + PDF) del contrato firmado en la carpeta de
+  // Drive del inquilino. Best-effort: si Drive falla acá, la firma ya quedó
+  // grabada en Airtable, no tiene sentido bloquear al inquilino por esto.
   try {
     const contract = await getContract(contractId);
     const renterId = contract?.renterIds[0];
@@ -41,7 +42,7 @@ export async function submitSignature(
             ? "Australiana"
             : "Extranjera";
 
-        const html = buildContractHtml({
+        const templateInput: ContractTemplateInput = {
           agreementDate: signedAt.slice(0, 10),
           rentalStartDate: contract.startDate,
           weeklyRate: contract.weeklyRate,
@@ -66,19 +67,21 @@ export async function submitSignature(
             qldCrn: renter.qldCrn,
           },
           signature: { name: signedName, signedAt },
-        });
+        };
+
+        const html = buildContractHtml(templateInput);
+        const pdf = await buildContractPdf({ ...templateInput, contractId: contract.contractId });
 
         const subfolderName = renterFolderName(
           `${car.make} ${car.model}`,
           renter.name,
           contract.startDate
         );
-        await uploadToDrive(
-          Buffer.from(html, "utf-8"),
-          "signed-contract.html",
-          "text/html",
-          subfolderName
-        );
+        const folder = await resolveRenterFolder(subfolderName);
+        await Promise.all([
+          uploadFileToFolder(Buffer.from(html, "utf-8"), "signed-contract.html", "text/html", folder.folderId),
+          uploadFileToFolder(pdf, "signed-contract.pdf", "application/pdf", folder.folderId),
+        ]);
       }
     }
   } catch {

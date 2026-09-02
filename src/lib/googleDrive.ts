@@ -78,15 +78,26 @@ export type DriveUploadResult = {
   folderLink: string;
 };
 
-export async function uploadToDrive(
+export type DriveFolder = { folderId: string; folderLink: string };
+
+// Resuelve (o crea) la subcarpeta del inquilino una sola vez. Separado de
+// uploadFileToFolder para que quien suba varios archivos (ej. el intake, con
+// hasta 3 fotos) no tenga que buscar/crear la misma carpeta una vez por
+// archivo - cada búsqueda es un round-trip a Drive, y sumados podían acercar
+// el envío al límite de tiempo de la función serverless en Vercel.
+export async function resolveRenterFolder(subfolderName: string): Promise<DriveFolder> {
+  const drive = getDriveClient();
+  const folderId = await findOrCreateSubfolder(drive, subfolderName);
+  return { folderId, folderLink: `https://drive.google.com/drive/folders/${folderId}` };
+}
+
+export async function uploadFileToFolder(
   buffer: Buffer,
   filename: string,
   mimeType: string,
-  subfolderName: string
-): Promise<DriveUploadResult> {
+  folderId: string
+): Promise<{ fileId: string; fileViewLink: string }> {
   const drive = getDriveClient();
-  const folderId = await findOrCreateSubfolder(drive, subfolderName);
-
   const upload = await drive.files.create({
     requestBody: { name: filename, parents: [folderId] },
     media: { mimeType, body: Readable.from(buffer) },
@@ -95,10 +106,18 @@ export async function uploadToDrive(
 
   if (!upload.data.id) throw new Error("No se pudo subir el archivo a Drive");
 
-  return {
-    fileId: upload.data.id,
-    fileViewLink: upload.data.webViewLink ?? "",
-    folderId,
-    folderLink: `https://drive.google.com/drive/folders/${folderId}`,
-  };
+  return { fileId: upload.data.id, fileViewLink: upload.data.webViewLink ?? "" };
+}
+
+// Atajo para cuando solo hay un archivo (ej. el contrato firmado en sign.ts) -
+// resuelve la carpeta y sube el archivo en un solo llamado.
+export async function uploadToDrive(
+  buffer: Buffer,
+  filename: string,
+  mimeType: string,
+  subfolderName: string
+): Promise<DriveUploadResult> {
+  const { folderId, folderLink } = await resolveRenterFolder(subfolderName);
+  const { fileId, fileViewLink } = await uploadFileToFolder(buffer, filename, mimeType, folderId);
+  return { fileId, fileViewLink, folderId, folderLink };
 }

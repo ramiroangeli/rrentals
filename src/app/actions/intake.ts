@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { put } from "@vercel/blob";
 import { createRenter, createContract, listCarsFull, type CarFull } from "@/lib/airtable";
-import { uploadToDrive, renterFolderName } from "@/lib/googleDrive";
+import { resolveRenterFolder, uploadFileToFolder, renterFolderName } from "@/lib/googleDrive";
 import { todayISOBrisbane } from "@/lib/format";
 
 export type IntakeFormState = { error?: string; success?: boolean } | undefined;
@@ -173,17 +173,26 @@ export async function submitIntake(
     ];
 
     try {
-      for (const { file, label } of filesToUpload) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-        const result = await uploadToDrive(
-          buffer,
-          `${label}.${ext}`,
-          file.type || "application/octet-stream",
-          subfolderName
-        );
-        driveFolderLink = result.folderLink;
-      }
+      // Resolvemos la carpeta una sola vez y subimos los archivos en
+      // paralelo (antes: una búsqueda/creación de carpeta POR archivo, en
+      // serie - con 3 fotos eso eran ~6 round-trips a Drive uno detrás del
+      // otro, suficiente para acercarse al límite de tiempo de la función
+      // serverless en Vercel y perder el envío entero).
+      const folder = await resolveRenterFolder(subfolderName);
+      driveFolderLink = folder.folderLink;
+
+      await Promise.all(
+        filesToUpload.map(async ({ file, label }) => {
+          const buffer = Buffer.from(await file.arrayBuffer());
+          const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+          await uploadFileToFolder(
+            buffer,
+            `${label}.${ext}`,
+            file.type || "application/octet-stream",
+            folder.folderId
+          );
+        })
+      );
     } catch (e) {
       pipelineError = `Drive: ${errorMessage(e)}`;
     }

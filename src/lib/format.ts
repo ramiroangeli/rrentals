@@ -13,12 +13,6 @@ export function formatDateAU(iso: string) {
   return `${d}/${m}/${y}`;
 }
 
-// DD-MM-YY, para nombres de carpeta en Drive (ej. "31-07-26").
-export function formatDateShort(iso: string) {
-  const [y, m, d] = iso.split("-");
-  return `${d}-${m}-${y.slice(2)}`;
-}
-
 export function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`;
 }

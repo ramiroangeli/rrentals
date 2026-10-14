@@ -222,7 +222,7 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// Snapshot autocontenido del contrato para guardar en Drive cuando el
+// Snapshot autocontenido del contrato para guardar en Blob cuando el
 // inquilino firma - mismo contenido que /firmar/[contractId], en un solo
 // archivo .html que se puede abrir o imprimir a PDF en cualquier momento.
 export function buildContractHtml(input: ContractTemplateInput): string {

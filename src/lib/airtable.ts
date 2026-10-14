@@ -452,6 +452,7 @@ export type ContractRecord = {
   bond: number;
   status: string;
   driveFolderUrl: string | null;
+  documentsUrl: string | null;
   signedName: string | null;
   signedAt: string | null;
   kmStart: number | null;
@@ -477,6 +478,7 @@ const fetchContracts = unstable_cache(
           "bond",
           "contract_status",
           "drive_folder_url",
+          "documents_url",
           "signed_name",
           "signed_at",
           "km_start",
@@ -498,6 +500,7 @@ const fetchContracts = unstable_cache(
       bond: (r.get("bond") as number) ?? 0,
       status: (r.get("contract_status") as string) ?? "-",
       driveFolderUrl: (r.get("drive_folder_url") as string) ?? null,
+      documentsUrl: (r.get("documents_url") as string) ?? null,
       signedName: (r.get("signed_name") as string) ?? null,
       signedAt: (r.get("signed_at") as string) ?? null,
       kmStart: (r.get("km_start") as number) ?? null,
@@ -515,6 +518,15 @@ export const getContract = cache(async (id: string): Promise<ContractRecord | nu
   const contracts = await listContracts();
   return contracts.find((c) => c.id === id) ?? null;
 });
+
+// Por contract_id ("CTR-008"), no por el recordId de Airtable - lo usa la
+// página de documentos, que vive en una URL legible por contract_id.
+export const getContractByContractId = cache(
+  async (contractId: string): Promise<ContractRecord | null> => {
+    const contracts = await listContracts();
+    return contracts.find((c) => c.contractId === contractId) ?? null;
+  }
+);
 
 // "CTR-001", "CTR-002"... - sigue la numeración que ya se venía usando a mano.
 function nextContractId(existingIds: string[]): string {
@@ -576,6 +588,24 @@ export async function updateContractStatus(id: string, status: string): Promise<
 
 export async function updateContractBond(id: string, bond: number): Promise<void> {
   await getBase()(TABLES.contracts).update(id, { bond });
+  revalidateTag("contracts", { expire: 0 });
+}
+
+export async function updateContractDocumentsUrl(id: string, documentsUrl: string): Promise<void> {
+  await getBase()(TABLES.contracts).update(id, { documents_url: documentsUrl });
+  revalidateTag("contracts", { expire: 0 });
+}
+
+// Lectura+escritura sin cachear a propósito (no pasa por listContracts): es un
+// log de errores de storage, no hace falta que compita con el revalidate de
+// CACHE_SECONDS del resto de la tabla.
+export async function appendContractNote(id: string, note: string): Promise<void> {
+  const record = await getBase()(TABLES.contracts).find(id);
+  const existing = (record.get("notes") as string) ?? "";
+  const line = `[${new Date().toISOString()}] ${note}`;
+  await getBase()(TABLES.contracts).update(id, {
+    notes: existing ? `${existing}\n${line}` : line,
+  });
   revalidateTag("contracts", { expire: 0 });
 }
 

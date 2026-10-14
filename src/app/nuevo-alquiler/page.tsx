@@ -3,10 +3,9 @@ import { todayISOBrisbane } from "@/lib/format";
 import { IntakeForm } from "@/components/IntakeForm";
 
 export const dynamic = "force-dynamic";
-// El envío sube hasta 3 fotos a Drive y escribe en Airtable - el default de
-// Vercel (10s) se queda corto si Drive anda lento. Ver intake.ts para el
-// resto de las mitigaciones (carpeta resuelta una sola vez, subida en
-// paralelo, backup a Blob).
+// El envío sube hasta 3 fotos a Blob y escribe en Airtable - el default de
+// Vercel (10s) se queda corto si alguna subida anda lenta. Ver intake.ts
+// para el resto de las mitigaciones (subida en paralelo, backup a Blob).
 export const maxDuration = 60;
 
 const AVAILABLE_STATUS = "Disponible";

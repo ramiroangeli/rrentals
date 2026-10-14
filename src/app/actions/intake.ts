@@ -2,8 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { put } from "@vercel/blob";
-import { createRenter, createContract, listCarsFull, type CarFull } from "@/lib/airtable";
-import { resolveRenterFolder, uploadFileToFolder, renterFolderName } from "@/lib/googleDrive";
+import {
+  createRenter,
+  createContract,
+  listCarsFull,
+  updateContractDocumentsUrl,
+  appendContractNote,
+  type CarFull,
+} from "@/lib/airtable";
+import { renterDocsPrefix, uploadPrivateDocument, documentsPageUrl } from "@/lib/documents";
 import { todayISOBrisbane } from "@/lib/format";
 
 export type IntakeFormState = { error?: string; success?: boolean } | undefined;
@@ -94,10 +101,10 @@ export async function submitIntake(
   const submittedAt = new Date().toISOString();
 
   // Backup crudo de todo lo que mandó el cliente (menos las fotos), guardado
-  // ANTES de tocar Drive/Airtable - si cualquiera de los dos falla más abajo
-  // (como pasó hoy con Drive), el cliente no pierde sus datos ni tiene que
-  // completar el formulario de nuevo. Se recupera a mano desde el dashboard
-  // de Vercel Blob; ver intake-needs-review/ para los casos que sí fallaron.
+  // ANTES de tocar Airtable/Blob - si algo falla más abajo, el cliente no
+  // pierde sus datos ni tiene que completar el formulario de nuevo. Se
+  // recupera a mano desde el dashboard de Vercel Blob; ver
+  // intake-needs-review/ para los casos que sí fallaron.
   const submissionData = {
     submittedAt,
     firstName,
@@ -155,11 +162,9 @@ export async function submitIntake(
     }
   }
 
-  let driveFolderLink: string | null = null;
   let renterId: string | null = null;
 
   if (car) {
-    const subfolderName = renterFolderName(`${car.make} ${car.model}`, fullName, rentalStartDate);
     const filesToUpload: { file: File; label: string }[] = [
       ...(auLicenceFrontPhoto ? [{ file: auLicenceFrontPhoto, label: "australian-licence-front" }] : []),
       ...(auLicenceBackPhoto ? [{ file: auLicenceBackPhoto, label: "australian-licence-back" }] : []),
@@ -172,30 +177,8 @@ export async function submitIntake(
       ...(crnPhoto ? [{ file: crnPhoto, label: "crn" }] : []),
     ];
 
-    try {
-      // Resolvemos la carpeta una sola vez y subimos los archivos en
-      // paralelo (antes: una búsqueda/creación de carpeta POR archivo, en
-      // serie - con 3 fotos eso eran ~6 round-trips a Drive uno detrás del
-      // otro, suficiente para acercarse al límite de tiempo de la función
-      // serverless en Vercel y perder el envío entero).
-      const folder = await resolveRenterFolder(subfolderName);
-      driveFolderLink = folder.folderLink;
-
-      await Promise.all(
-        filesToUpload.map(async ({ file, label }) => {
-          const buffer = Buffer.from(await file.arrayBuffer());
-          const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-          await uploadFileToFolder(
-            buffer,
-            `${label}.${ext}`,
-            file.type || "application/octet-stream",
-            folder.folderId
-          );
-        })
-      );
-    } catch (e) {
-      pipelineError = `Drive: ${errorMessage(e)}`;
-    }
+    let contractRecordId: string | null = null;
+    let contractIdStr: string | null = null;
 
     try {
       renterId = await createRenter({
@@ -210,10 +193,10 @@ export async function submitIntake(
         licenceExpiry: licenceExpiry || null,
         qldCrn,
         dateOfBirth,
-        driveFolderUrl: driveFolderLink,
+        driveFolderUrl: null,
       });
 
-      await createContract({
+      const contract = await createContract({
         renterId,
         carId,
         startDate: rentalStartDate,
@@ -221,8 +204,53 @@ export async function submitIntake(
         bond: 0,
         status: "Pendiente",
       });
+      contractRecordId = contract.id;
+      contractIdStr = contract.contractId;
     } catch (e) {
-      pipelineError = (pipelineError ? `${pipelineError} | ` : "") + `Airtable: ${errorMessage(e)}`;
+      pipelineError = `Airtable: ${errorMessage(e)}`;
+    }
+
+    // Subimos las fotos recién acá, una vez que el inquilino ya existe (el
+    // path en Blob usa su recordId para no pisarse con un tocayo). Cada
+    // archivo se sube por separado - si uno falla no se cae el resto, a
+    // diferencia de Drive antes, donde un solo error (ej. token vencido)
+    // tiraba abajo la subida entera sin haber guardado ni una foto.
+    if (renterId && contractRecordId && contractIdStr) {
+      const prefix = renterDocsPrefix(renterId, fullName);
+      const uploadErrors: string[] = [];
+
+      await Promise.all(
+        filesToUpload.map(async ({ file, label }) => {
+          try {
+            const buffer = Buffer.from(await file.arrayBuffer());
+            const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+            await uploadPrivateDocument(
+              `${prefix}${label}.${ext}`,
+              buffer,
+              file.type || "application/octet-stream"
+            );
+          } catch (e) {
+            uploadErrors.push(`${label}: ${errorMessage(e)}`);
+          }
+        })
+      );
+
+      const documentsUrl = documentsPageUrl(contractIdStr);
+      try {
+        await updateContractDocumentsUrl(contractRecordId, documentsUrl);
+      } catch (e) {
+        console.error("[intake] no se pudo guardar documents_url:", errorMessage(e));
+      }
+
+      if (uploadErrors.length > 0) {
+        const note = `Documentos: fallaron ${uploadErrors.length}/${filesToUpload.length} archivo(s) al subir - ${uploadErrors.join("; ")}`;
+        pipelineError = (pipelineError ? `${pipelineError} | ` : "") + note;
+        try {
+          await appendContractNote(contractRecordId, note);
+        } catch (e) {
+          console.error("[intake] no se pudo registrar el error en notes:", errorMessage(e));
+        }
+      }
     }
   }
 
@@ -238,7 +266,7 @@ export async function submitIntake(
     try {
       await put(
         `intake-needs-review/${backupName}`,
-        JSON.stringify({ ...submissionData, driveFolderLink, renterId, error: pipelineError }, null, 2),
+        JSON.stringify({ ...submissionData, renterId, error: pipelineError }, null, 2),
         { access: "private", contentType: "application/json", addRandomSuffix: false }
       );
     } catch (e) {

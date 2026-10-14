@@ -66,9 +66,9 @@ export function PendingContractCard({
         <Detail label="Semanal" value={formatCurrency(contract.weeklyRate)} />
       </div>
 
-      {renter?.driveFolderUrl && (
+      {(contract.documentsUrl ?? renter?.driveFolderUrl) && (
         <a
-          href={renter.driveFolderUrl}
+          href={contract.documentsUrl ?? renter?.driveFolderUrl ?? "#"}
           target="_blank"
           rel="noopener noreferrer"
           className="mb-3 block text-sm font-medium text-teal-700 underline dark:text-teal-400"

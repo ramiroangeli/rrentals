@@ -4,14 +4,13 @@ export type ContractView = {
   id: string;
   contractId: string;
   renterName: string;
-  renterDocsUrl: string | null;
+  documentsUrl: string | null;
   carLabel: string;
   startDate: string | null;
   endDate: string | null;
   weeklyRate: number;
   bond: number;
   status: string;
-  contractDocsUrl: string | null;
   signedName: string | null;
   signedAt: string | null;
   kmStart: number | null;
@@ -37,14 +36,15 @@ export async function listContractViews(): Promise<ContractView[]> {
       id: contract.id,
       contractId: contract.contractId,
       renterName: renter?.name ?? "-",
-      renterDocsUrl: renter?.driveFolderUrl ?? null,
+      // documents_url (Blob, nuevo) primero; drive_folder_url (legacy) como
+      // respaldo para contratos de antes de sacar Drive del flujo.
+      documentsUrl: contract.documentsUrl ?? contract.driveFolderUrl ?? renter?.driveFolderUrl ?? null,
       carLabel: car ? `${car.rego} - ${car.make} ${car.model}` : "-",
       startDate: contract.startDate,
       endDate: contract.endDate,
       weeklyRate: contract.weeklyRate,
       bond: contract.bond,
       status: contract.status,
-      contractDocsUrl: contract.driveFolderUrl,
       signedName: contract.signedName,
       signedAt: contract.signedAt,
       kmStart: contract.kmStart,

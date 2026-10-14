@@ -168,14 +168,9 @@ export function ContractCard({ contract, signUrl }: { contract: ContractView; si
         </div>
       </div>
 
-      {(contract.contractDocsUrl || contract.renterDocsUrl) && (
+      {contract.documentsUrl && (
         <div className="mb-3 flex gap-2">
-          {contract.renterDocsUrl && (
-            <DocsButton href={contract.renterDocsUrl} label="Ver documentos" />
-          )}
-          {contract.contractDocsUrl && (
-            <DocsButton href={contract.contractDocsUrl} label="Ver contrato" variant="secondary" />
-          )}
+          <DocsButton href={contract.documentsUrl} label="Ver documentos" />
         </div>
       )}
 

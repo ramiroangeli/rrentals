@@ -59,14 +59,6 @@ export default async function SopPage() {
               href="https://github.com/ramiroangeli/rrentals"
             />
             <LinkRow label="Base de Airtable" href="https://airtable.com/appQHr080xm4sCku3" />
-            <LinkRow
-              label="Google Cloud (credenciales)"
-              href="https://console.cloud.google.com/apis/credentials?project=rrentals"
-            />
-            <LinkRow
-              label="OAuth Playground (Drive)"
-              href="https://developers.google.com/oauthplayground/"
-            />
           </div>
         </Card>
 
@@ -91,8 +83,8 @@ export default async function SopPage() {
               En esa misma tarjeta aparece el link de firma - lo copiás y se lo mandás al cliente.
             </Step>
             <Step n={7}>
-              El cliente firma. Queda grabado solo, y una copia del contrato se guarda sola en su
-              carpeta de Drive.
+              El cliente firma. Queda grabado solo, y una copia del contrato (HTML + PDF) se guarda
+              sola en Blob - visible con el botón &quot;Ver documentos&quot; de esa tarjeta.
             </Step>
             <Step n={8}>
               Cuando termine ese alquiler, volvés al paso 2 para dejar el auto disponible para el
@@ -121,23 +113,12 @@ export default async function SopPage() {
           </ol>
         </Card>
 
-        <Card title="🔑 Si falla la conexión con Google Drive">
+        <Card title="📄 Dónde quedan los documentos">
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            El acceso a Drive depende de un &quot;refresh token&quot; que puede vencer si no se
-            usa por mucho tiempo, si se revoca manualmente desde la cuenta de Google, o si cambia
-            la contraseña de la cuenta. Si el formulario empieza a fallar al subir fotos:
+            Las fotos de licencia y la copia firmada del contrato se guardan en Vercel Blob (store
+            privado, no en Google Drive). Se ven solo logueado en la app, desde el botón &quot;Ver
+            documentos&quot; de cada contrato - no hay link público ni token que pueda vencer.
           </p>
-          <ol className="mt-3 space-y-3">
-            <Step n={1}>
-              Entrás a la OAuth Playground (link arriba) con las credenciales de siempre (Client
-              ID / Secret ya guardados en Vercel).
-            </Step>
-            <Step n={2}>Repetís el proceso de autorización para generar un token nuevo.</Step>
-            <Step n={3}>
-              Actualizás <code>GOOGLE_OAUTH_REFRESH_TOKEN</code> en Vercel con el valor nuevo, y
-              hacés un redeploy.
-            </Step>
-          </ol>
         </Card>
       </div>
     </div>

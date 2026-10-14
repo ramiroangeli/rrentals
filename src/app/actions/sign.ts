@@ -1,10 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { signContract, getContract, getRenter, listCarsFull } from "@/lib/airtable";
-import { buildContractHtml, type ContractTemplateInput, type LicenceType } from "@/lib/contractTemplate";
+import { signContract, updateContractDocumentsUrl, appendContractNote } from "@/lib/airtable";
+import { buildContractHtml } from "@/lib/contractTemplate";
 import { buildContractPdf } from "@/lib/contractPdf";
-import { resolveRenterFolder, uploadFileToFolder, renterFolderName } from "@/lib/googleDrive";
+import { buildSignedContractInput } from "@/lib/contractDocuments";
+import { contractDocsPrefix, uploadPrivateDocument, documentsPageUrl } from "@/lib/documents";
+
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
 
 export type SignFormState = { error?: string } | undefined;
 
@@ -24,68 +29,32 @@ export async function submitSignature(
   const signedAt = new Date().toISOString();
   await signContract(contractId, signedName, signedAt);
 
-  // Guardar una copia (HTML + PDF) del contrato firmado en la carpeta de
-  // Drive del inquilino. Best-effort: si Drive falla acá, la firma ya quedó
-  // grabada en Airtable, no tiene sentido bloquear al inquilino por esto.
+  // Guardar una copia (HTML + PDF) del contrato firmado en Blob. Best-effort:
+  // si esto falla, la firma ya quedó grabada en Airtable, no tiene sentido
+  // bloquear al inquilino por esto - pero a diferencia de antes, el error
+  // queda anotado en el contrato en vez de perderse en silencio.
   try {
-    const contract = await getContract(contractId);
-    const renterId = contract?.renterIds[0];
-    const carId = contract?.carIds[0];
+    const input = await buildSignedContractInput(contractId);
+    if (input) {
+      const html = buildContractHtml(input);
+      const pdf = await buildContractPdf(input);
+      const prefix = contractDocsPrefix(input.contractId);
 
-    if (contract && renterId && carId && contract.startDate) {
-      const [renter, cars] = await Promise.all([getRenter(renterId), listCarsFull()]);
-      const car = cars.find((c) => c.id === carId);
-
-      if (renter && car) {
-        const licenceType: LicenceType =
-          renter.licenceIssuingCountry.trim().toLowerCase() === "australia"
-            ? "Australiana"
-            : "Extranjera";
-
-        const templateInput: ContractTemplateInput = {
-          agreementDate: signedAt.slice(0, 10),
-          rentalStartDate: contract.startDate,
-          weeklyRate: contract.weeklyRate,
-          bond: contract.bond,
-          car: {
-            year: car.year ?? "-",
-            make: car.make,
-            model: car.model,
-            rego: car.rego,
-            vin: car.vin ?? "-",
-          },
-          renter: {
-            fullName: renter.name,
-            address: renter.address,
-            dateOfBirth: renter.dateOfBirth ?? "",
-            phone: renter.phone,
-            licenceType,
-            licenceNumber: renter.licenceNumber,
-            licenceIssuingCountry: renter.licenceIssuingCountry,
-            licenceExpiry: renter.licenceExpiry ?? "",
-            passportNumber: renter.passportNumber,
-            qldCrn: renter.qldCrn,
-          },
-          signature: { name: signedName, signedAt },
-        };
-
-        const html = buildContractHtml(templateInput);
-        const pdf = await buildContractPdf({ ...templateInput, contractId: contract.contractId });
-
-        const subfolderName = renterFolderName(
-          `${car.make} ${car.model}`,
-          renter.name,
-          contract.startDate
-        );
-        const folder = await resolveRenterFolder(subfolderName);
-        await Promise.all([
-          uploadFileToFolder(Buffer.from(html, "utf-8"), "signed-contract.html", "text/html", folder.folderId),
-          uploadFileToFolder(pdf, "signed-contract.pdf", "application/pdf", folder.folderId),
-        ]);
-      }
+      await Promise.all([
+        uploadPrivateDocument(`${prefix}contrato-firmado.html`, Buffer.from(html, "utf-8"), "text/html"),
+        uploadPrivateDocument(`${prefix}contrato-firmado.pdf`, pdf, "application/pdf"),
+      ]);
+      await updateContractDocumentsUrl(contractId, documentsPageUrl(input.contractId));
     }
-  } catch {
-    // No bloquea la firma si falla el archivo en Drive.
+  } catch (e) {
+    try {
+      await appendContractNote(
+        contractId,
+        `Documentos: no se pudo guardar la copia firmada - ${errorMessage(e)}`
+      );
+    } catch {
+      // Si ni siquiera se puede anotar el error, no hay más red de contención.
+    }
   }
 
   revalidatePath(`/firmar/${contractId}`);

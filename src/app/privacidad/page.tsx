@@ -63,8 +63,9 @@ export default function PrivacidadPage() {
       <Section title="Dónde se guardan">
         <p>
           Los datos del formulario se guardan en Airtable (base de datos donde administramos
-          inquilinos y contratos) y las fotos de tu licencia se guardan en una carpeta de Google
-          Drive dedicada a tu solicitud, con acceso restringido al equipo de Rrentals.
+          inquilinos y contratos) y las fotos de tu licencia se guardan en un almacenamiento
+          privado (Vercel Blob) dedicado a tu solicitud, con acceso restringido al equipo de
+          Rrentals.
         </p>
       </Section>
 

@@ -2,6 +2,7 @@ import type { ContractView } from "@/lib/contracts";
 import { computeKmUsage } from "@/lib/contracts";
 import { formatCurrency, formatDateAU, todayISOBrisbane } from "@/lib/format";
 import { setKmStart, returnContract } from "@/app/actions/contracts";
+import { CollapsibleContract } from "@/components/ContractSummaryRow";
 
 function DocsButton({
   href,
@@ -122,21 +123,28 @@ function KmSection({ contract }: { contract: ContractView }) {
   );
 }
 
-export function ContractCard({ contract, signUrl }: { contract: ContractView; signUrl: string }) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div>
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-            {contract.contractId}
-          </h2>
-          <p className="text-sm text-zinc-500">{contract.carLabel}</p>
-        </div>
-        <span className="shrink-0 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300">
-          {contract.status}
-        </span>
-      </div>
+export function ContractCard({
+  contract,
+  signUrl,
+  defaultOpen,
+}: {
+  contract: ContractView;
+  signUrl: string;
+  defaultOpen: boolean;
+}) {
+  const finalized = contract.status === "Finalizado";
 
+  return (
+    <CollapsibleContract
+      defaultOpen={defaultOpen}
+      tone={finalized ? "muted" : "default"}
+      contractId={contract.contractId}
+      renterName={contract.renterName}
+      carLabel={contract.carLabel}
+      startDate={contract.startDate}
+      endDate={contract.returnDate ?? contract.endDate}
+      status={contract.status}
+    >
       <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
         <div>
           <div className="text-xs text-zinc-500">Inquilino</div>
@@ -195,6 +203,6 @@ export function ContractCard({ contract, signUrl }: { contract: ContractView; si
       )}
 
       <KmSection contract={contract} />
-    </div>
+    </CollapsibleContract>
   );
 }

@@ -1,6 +1,7 @@
 import type { CarFull, ContractRecord, RenterFull } from "@/lib/airtable";
 import { formatCurrency, formatDateAU } from "@/lib/format";
 import { approveContract, rejectContract } from "@/app/actions/contracts";
+import { CollapsibleContract } from "@/components/ContractSummaryRow";
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
@@ -20,22 +21,19 @@ export function PendingContractCard({
   renter: RenterFull | undefined;
   car: CarFull | undefined;
 }) {
-  return (
-    <div className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-4 dark:border-amber-600 dark:bg-amber-950/40">
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div>
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-            {renter?.name ?? "-"}
-          </h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            {car ? `${car.rego} - ${car.make} ${car.model}` : "-"}
-          </p>
-        </div>
-        <span className="shrink-0 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white">
-          Pendiente
-        </span>
-      </div>
+  const carLabel = car ? `${car.rego} - ${car.make} ${car.model}` : "-";
 
+  return (
+    <CollapsibleContract
+      defaultOpen
+      tone="pending"
+      contractId={contract.contractId}
+      renterName={renter?.name ?? "-"}
+      carLabel={carLabel}
+      startDate={contract.startDate}
+      endDate={contract.endDate}
+      status="Pendiente"
+    >
       <div className="mb-3 grid grid-cols-2 gap-3 text-sm">
         <Detail label="Nacionalidad" value={renter?.nationality || "-"} />
         <Detail
@@ -103,6 +101,6 @@ export function PendingContractCard({
           Rechazar
         </button>
       </form>
-    </div>
+    </CollapsibleContract>
   );
 }

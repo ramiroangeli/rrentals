@@ -31,10 +31,11 @@ export default async function ContratosPage() {
   const carById = new Map(cars.map((c) => [c.id, c]));
 
   // Arriba: todo lo que no esté Finalizado (Pendiente se muestra aparte con
-  // su propia tarjeta/formulario de aprobación; el resto - Active,
-  // Rechazado, o cualquier status futuro - cae en "activos"). Al final:
-  // Finalizado, comprimido y en gris. Dentro de cada grupo, más reciente
-  // primero - los finalizados por fecha real de devolución cuando la hay.
+  // su propia tarjeta/formulario de aprobación, expandida porque requiere
+  // acción; el resto - Active, Rechazado, o cualquier status futuro - cae en
+  // "activos", comprimido y en verde). Al final: Finalizado, comprimido y en
+  // gris. Dentro de cada grupo, más reciente primero - los finalizados por
+  // fecha real de devolución cuando la hay.
   const pending: ContractRecord[] = sortByDateDesc(
     contracts.filter((c) => c.status === "Pendiente"),
     (c) => c.startDate
@@ -80,7 +81,7 @@ export default async function ContratosPage() {
                 key={contract.id}
                 contract={contract}
                 signUrl={`${baseUrl}/firmar/${contract.id}`}
-                defaultOpen
+                defaultOpen={false}
               />
             ))}
           </div>

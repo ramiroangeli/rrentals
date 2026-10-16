@@ -133,11 +133,12 @@ export function ContractCard({
   defaultOpen: boolean;
 }) {
   const finalized = contract.status === "Finalizado";
+  const tone = finalized ? "muted" : contract.status === "Active" ? "active" : "default";
 
   return (
     <CollapsibleContract
       defaultOpen={defaultOpen}
-      tone={finalized ? "muted" : "default"}
+      tone={tone}
       contractId={contract.contractId}
       renterName={contract.renterName}
       carLabel={contract.carLabel}

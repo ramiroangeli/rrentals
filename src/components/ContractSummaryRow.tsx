@@ -1,30 +1,34 @@
 import type { ReactNode } from "react";
 import { formatDateAU } from "@/lib/format";
 
-type Tone = "default" | "muted" | "pending";
+type Tone = "default" | "muted" | "pending" | "active";
 
 const CARD_TONE: Record<Tone, string> = {
   default: "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950",
   muted: "border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/60",
   pending: "border-2 border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-950/40",
+  active: "border-2 border-emerald-400 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-950/40",
 };
 
 const BADGE_TONE: Record<Tone, string> = {
   default: "bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
   muted: "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
   pending: "bg-amber-500 text-white",
+  active: "bg-emerald-500 text-white",
 };
 
 const TITLE_TONE: Record<Tone, string> = {
   default: "text-zinc-900 dark:text-zinc-50",
   muted: "text-zinc-500 dark:text-zinc-400",
   pending: "text-zinc-900 dark:text-zinc-50",
+  active: "text-zinc-900 dark:text-zinc-50",
 };
 
 const SUBTITLE_TONE: Record<Tone, string> = {
   default: "text-zinc-600 dark:text-zinc-300",
   muted: "text-zinc-400 dark:text-zinc-500",
   pending: "text-zinc-600 dark:text-zinc-400",
+  active: "text-zinc-700 dark:text-zinc-300",
 };
 
 function Chevron() {
